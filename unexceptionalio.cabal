@@ -1,0 +1,30 @@
+name:            unexceptionalio
+version:         0.1.0
+cabal-version:   >=1.8
+license:         OtherLicense
+license-file:    COPYING
+copyright:       © 2013 Stephen Paul Weber
+category:        Control
+author:          Stephen Paul Weber <singpolyma@singpolyma.net>
+maintainer:      Stephen Paul Weber <singpolyma@singpolyma.net>
+stability:       experimental
+build-type:      Simple
+homepage:        https://github.com/singpolyma/unexceptionalio
+bug-reports:     http://github.com/singpolyma/unexceptionalio/issues
+synopsis:        IO without any non-error, synchronous exceptions
+description:
+        When you've caught all the exceptions that can be handled safely,
+        this is what you're left with.
+
+library
+        exposed-modules:
+                UnexceptionalIO
+
+        build-depends:
+                base == 4.*,
+                errors >= 1.4.2,
+                transformers
+
+source-repository head
+        type:     git
+        location: git://github.com/singpolyma/unexceptionalio.git
