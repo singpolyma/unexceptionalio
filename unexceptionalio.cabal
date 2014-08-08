@@ -1,5 +1,5 @@
 name:            unexceptionalio
-version:         0.1.0
+version:         0.2.0
 cabal-version:   >=1.8
 license:         OtherLicense
 license-file:    COPYING
@@ -21,9 +21,7 @@ library
                 UnexceptionalIO
 
         build-depends:
-                base == 4.*,
-                errors >= 1.4.2,
-                transformers
+                base == 4.*
 
 source-repository head
         type:     git
