@@ -1,15 +1,15 @@
 -- | When you've caught all the exceptions that can be handled safely,
 --   this is what you're left with.
 --
--- > runEitherIO . fromIO ≡ id
+-- > runEitherIO . uio ≡ id
 module UnexceptionalIO (
   UnexceptionalIO,
   UIO,
-  fromIO,
-  runUnexceptionalIO,
+  uio,
+  runUIO,
   -- * Unsafe entry points
-  fromIO',
-  unsafeFromIO
+  unsafeUIO,
+  unsafeUIO',
 ) where
 
 import Control.Applicative (Applicative(..))
@@ -35,16 +35,16 @@ instance Applicative UnexceptionalIO where
 
 instance Monad UnexceptionalIO where
   return = UnexceptionalIO . return
-  UnexceptionalIO x >>= f = UnexceptionalIO (x >>= runUnexceptionalIO . f)
+  UnexceptionalIO x >>= f = UnexceptionalIO (x >>= runUIO . f)
 
   fail s = error $ "UnexceptionalIO cannot fail (" ++ s ++ ")"
 
 instance MonadFix UnexceptionalIO where
-  mfix f = UnexceptionalIO (mfix $ runUnexceptionalIO . f)
+  mfix f = UnexceptionalIO (mfix $ runUIO . f)
 
 -- | Catch any non-error, synchronous exceptions in an 'IO' action
-fromIO :: IO a -> UnexceptionalIO (Either SomeException a)
-fromIO = UnexceptionalIO . flip catches handlers . fmap Right
+uio :: IO a -> UnexceptionalIO (Either SomeException a)
+uio = UnexceptionalIO . flip catches handlers . fmap Right
   where
   handlers =
     [ 
@@ -69,19 +69,19 @@ fromIO = UnexceptionalIO . flip catches handlers . fmap Right
     ]
 
 -- | Re-embed 'UnexceptionalIO' into 'IO'
-runUnexceptionalIO :: UnexceptionalIO a -> IO a
-runUnexceptionalIO (UnexceptionalIO io) = io
+runUIO :: UnexceptionalIO a -> IO a
+runUIO (UnexceptionalIO io) = io
+
+-- | You promise there are no exceptions thrown by this 'IO' action
+unsafeUIO :: IO a -> UnexceptionalIO a
+unsafeUIO = UnexceptionalIO
 
 -- | You promise that 'e' covers all non-error, synchronous exceptions
 --   thrown by this 'IO' action
 --
 -- This function is partial if you lie
-fromIO' :: Exception e => IO a -> UnexceptionalIO (Either e a)
-fromIO' = (fmap . left) (maybePartial . fromException) . fromIO
+unsafeUIO' :: Exception e => IO a -> UnexceptionalIO (Either e a)
+unsafeUIO' = (fmap . left) (maybePartial . fromException) . uio
   where
   maybePartial (Just x) = x
-  maybePartial Nothing = error "UnexceptionalIO.fromIO' exception of unspecified type"
-
--- | You promise there are no exceptions thrown by this 'IO' action
-unsafeFromIO :: IO a -> UnexceptionalIO a
-unsafeFromIO = UnexceptionalIO
+  maybePartial Nothing = error "UnexceptionalIO.unsafeUIO' exception of unspecified type"
