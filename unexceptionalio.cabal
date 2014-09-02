@@ -15,6 +15,11 @@ synopsis:        IO without any non-error, synchronous exceptions
 description:
         When you've caught all the exceptions that can be handled safely,
         this is what you're left with.
+        .
+        It is intended that you use qualified imports with this library.
+        .
+        > import UnexceptionalIO (UIO)
+        > import qualified UnexceptionalIO as UIO
 
 library
         exposed-modules:
