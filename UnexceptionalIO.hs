@@ -17,7 +17,6 @@ import Control.Monad (liftM, ap, (<=<))
 import Control.Monad.Fix (MonadFix(..))
 import Control.Error (syncIO, mapEitherT, EitherT(..), fmapLT)
 import Control.Exception (SomeException, Exception, fromException, throwIO)
-import Control.Monad.IO.Class (liftIO, MonadIO)
 
 -- | IO without any non-error, synchronous exceptions
 newtype UnexceptionalIO a = UnexceptionalIO (IO a)
@@ -43,12 +42,12 @@ fromIO :: IO a -> EitherT SomeException UnexceptionalIO a
 fromIO = mapEitherT unsafeFromIO . syncIO
 
 -- | Re-embed 'UnexceptionalIO' into 'IO'
-runUnexceptionalIO :: (MonadIO m) => UnexceptionalIO a -> m a
-runUnexceptionalIO (UnexceptionalIO io) = liftIO io
+runUnexceptionalIO :: UnexceptionalIO a -> IO a
+runUnexceptionalIO (UnexceptionalIO io) = io
 
 -- | Re-embed 'UnexceptionalIO' and possible exception back into 'IO'
-runEitherIO :: (MonadIO m, Exception e) => EitherT e UnexceptionalIO a -> m a
-runEitherIO = either (liftIO . throwIO) return <=< runUnexceptionalIO . runEitherT
+runEitherIO :: (Exception e) => EitherT e UnexceptionalIO a -> IO a
+runEitherIO = either throwIO return <=< runUnexceptionalIO . runEitherT
 
 -- | You promise that 'e' covers all non-error, synchronous exceptions
 --   thrown by this 'IO' action
