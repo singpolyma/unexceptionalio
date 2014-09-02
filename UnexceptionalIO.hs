@@ -5,6 +5,7 @@
 -- > runEitherIO . fromIO ≡ id
 module UnexceptionalIO (
 	UnexceptionalIO,
+	UIO,
 	fromIO,
 	runUnexceptionalIO,
 	runEitherIO,
@@ -41,6 +42,9 @@ throwIO = ioError
 
 -- | IO without any non-error, synchronous exceptions
 newtype UnexceptionalIO a = UnexceptionalIO (IO a)
+
+-- | or, you may prefer a short name
+type UIO = UnexceptionalIO
 
 instance Functor UnexceptionalIO where
 	fmap = liftM
