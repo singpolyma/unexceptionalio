@@ -1,5 +1,5 @@
-GHCFLAGS=-Wall -XNoCPP -fno-warn-name-shadowing -XHaskell98
-HLINTFLAGS=-XHaskell98 -XNoCPP -i 'Use camelCase' -i 'Use String' -i 'Use string literal' -i 'Use list comprehension' --utf8 -XMultiParamTypeClasses
+GHCFLAGS=-Wall -fno-warn-name-shadowing -XHaskell98
+HLINTFLAGS=-XHaskell98 -XCPP -i 'Use camelCase' -i 'Use String' -i 'Use string literal' -i 'Use list comprehension' --utf8 -XMultiParamTypeClasses
 VERSION=0.1.0
 
 .PHONY: all clean doc install
