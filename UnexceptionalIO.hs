@@ -4,10 +4,9 @@
 --
 -- > runEitherIO . fromIO ≡ id
 module UnexceptionalIO (
-	UnexceptionalIO,
 	UIO,
 	fromIO,
-	runUnexceptionalIO,
+	runUIO,
 	runEitherIO,
 	-- * Unsafe entry points
 #ifdef __GLASGOW_HASKELL__
@@ -41,49 +40,46 @@ throwIO = ioError
 #endif
 
 -- | IO without any non-error, synchronous exceptions
-newtype UnexceptionalIO a = UnexceptionalIO (IO a)
+newtype UIO a = UIO (IO a)
 
--- | or, you may prefer a short name
-type UIO = UnexceptionalIO
-
-instance Functor UnexceptionalIO where
+instance Functor UIO where
 	fmap = liftM
 
-instance Applicative UnexceptionalIO where
+instance Applicative UIO where
 	pure = return
 	(<*>) = ap
 
-instance Monad UnexceptionalIO where
-	return = UnexceptionalIO . return
-	(UnexceptionalIO x) >>= f = UnexceptionalIO (x >>= runUnexceptionalIO . f)
+instance Monad UIO where
+	return = UIO . return
+	(UIO x) >>= f = UIO (x >>= runUIO . f)
 
 	fail s = error $ "UnexceptionalIO cannot fail (" ++ s ++ ")"
 
-instance MonadFix UnexceptionalIO where
-	mfix f = UnexceptionalIO (mfix $ runUnexceptionalIO . f)
+instance MonadFix UIO where
+	mfix f = UIO (mfix $ runUIO . f)
 
 -- | Catch any non-error, synchronous exceptions in an 'IO' action
-fromIO :: IO a -> UnexceptionalIO (Either SomeException a)
+fromIO :: IO a -> UIO (Either SomeException a)
 fromIO = unsafeFromIO . syncIO
 
--- | Re-embed 'UnexceptionalIO' into 'IO'
-runUnexceptionalIO :: UnexceptionalIO a -> IO a
-runUnexceptionalIO (UnexceptionalIO io) = io
+-- | Re-embed 'UIO' into 'IO'
+runUIO :: UIO a -> IO a
+runUIO (UIO io) = io
 
--- | Re-embed 'UnexceptionalIO' and possible exception back into 'IO'
+-- | Re-embed 'UIO' and possible exception back into 'IO'
 #ifdef __GLASGOW_HASKELL__
-runEitherIO :: (Ex.Exception e) => UnexceptionalIO (Either e a) -> IO a
+runEitherIO :: (Ex.Exception e) => UIO (Either e a) -> IO a
 #else
-runEitherIO :: UnexceptionalIO (Either SomeException a) -> IO a
+runEitherIO :: UIO (Either SomeException a) -> IO a
 #endif
-runEitherIO = either throwIO return <=< runUnexceptionalIO
+runEitherIO = either throwIO return <=< runUIO
 
 #ifdef __GLASGOW_HASKELL__
 -- | You promise that 'e' covers all non-error, synchronous exceptions
 --   thrown by this 'IO' action
 --
 -- This function is partial if you lie
-fromIO' :: (Ex.Exception e) => IO a -> UnexceptionalIO (Either e a)
+fromIO' :: (Ex.Exception e) => IO a -> UIO (Either e a)
 fromIO' =
 	(return . either (Left . maybePartial . Ex.fromException) Right) <=< fromIO
 	where
@@ -92,8 +88,8 @@ fromIO' =
 #endif
 
 -- | You promise there are no exceptions thrown by this 'IO' action
-unsafeFromIO :: IO a -> UnexceptionalIO a
-unsafeFromIO = UnexceptionalIO
+unsafeFromIO :: IO a -> UIO a
+unsafeFromIO = UIO
 
 -- | Catch all exceptions, except for asynchronous exceptions found in @base@
 syncIO :: IO a -> IO (Either SomeException a)
