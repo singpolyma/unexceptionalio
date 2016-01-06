@@ -5,6 +5,7 @@
 -- > runEitherIO . fromIO ≡ id
 module UnexceptionalIO (
 	UIO,
+	Unexceptional,
 	fromIO,
 	runUIO,
 	runEitherIO,
@@ -57,6 +58,16 @@ instance Monad UIO where
 
 instance MonadFix UIO where
 	mfix f = UIO (mfix $ runUIO . f)
+
+-- | Polymorphic base without any non-error, synchronous exceptions
+class Unexceptional m where
+	liftUIO :: UIO a -> m a
+
+instance Unexceptional UIO where
+	liftUIO = id
+
+instance Unexceptional IO where
+	liftUIO = runUIO
 
 -- | Catch any non-error, synchronous exceptions in an 'IO' action
 fromIO :: IO a -> UIO (Either SomeException a)
