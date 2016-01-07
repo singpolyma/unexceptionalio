@@ -5,7 +5,7 @@
 -- > runEitherIO . fromIO ≡ id
 module UnexceptionalIO (
 	UIO,
-	Unexceptional,
+	Unexceptional(..),
 	fromIO,
 	runUIO,
 	runEitherIO,
