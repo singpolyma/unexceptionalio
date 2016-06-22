@@ -123,6 +123,12 @@ syncIO a = Ex.catches (fmap Right a) [
 		Ex.Handler (\e -> Ex.throwIO (e :: Ex.RecConError)),
 		Ex.Handler (\e -> Ex.throwIO (e :: Ex.RecSelError)),
 		Ex.Handler (\e -> Ex.throwIO (e :: Ex.RecUpdError)),
+#if MIN_VERSION_base(4,8,0)
+		Ex.Handler (\e -> Ex.throwIO (e :: Ex.AllocationLimitExceeded)),
+#endif
+#if MIN_VERSION_base(4,9,0)
+		Ex.Handler (\e -> Ex.throwIO (e :: Ex.TypeError)),
+#endif
 		Ex.Handler (return . Left)
 	]
 #else
