@@ -2,6 +2,7 @@ import Test.Framework (defaultMain, testGroup, Test)
 import Test.Framework.Providers.HUnit
 import Test.HUnit hiding (Test, assert)
 
+import Control.Monad
 import Control.Exception
 import System.Exit
 import Data.Array
@@ -38,24 +39,24 @@ tests =
 		testGroup "fromIO catches runtime errors" [
 			testCase "fail" (fromIOCatches $ fail "boo"),
 			testCase "userError" (fromIOCatches $ throwIO $ userError "boo"),
-			testCase "CustomException" (fromIOCatches $ throwIO $ CustomException)
+			testCase "CustomException" (fromIOCatches $ throwIO CustomException)
 		],
 		testGroup "fromIO passes through programmer errors" [
 			testCase "error" (fromIOPasses $ error "boo"),
-			testCase "undefined" (fromIOPasses $ undefined),
-			testCase "ArithException" (fromIOPasses $ (return $! 1 `div` 0) >> return ()),
+			testCase "undefined" (fromIOPasses undefined),
+			testCase "ArithException" (fromIOPasses $ void (return $! 1 `div` 0)),
 			testCase "assert" (fromIOPasses $ assert False (return ())),
 			testCase "pattern match fail" (fromIOPasses $ (\(Just x) -> return ()) Nothing),
-			testCase "array out of bounds" (fromIOPasses $ (return $! ((listArray (0,1) [0..]) ! 100)) >> return ()),
+			testCase "array out of bounds" (fromIOPasses $ void (return $! (listArray (0,1) [0..] ! 100))),
 			testCase "no method" (fromIOPasses $ print CantShow),
-			testCase "use uninitialized record field" (fromIOPasses $ print $ badfld $ BadRecord {}),
-			testCase "use not present record field" (fromIOPasses $ print $ otherfld $ BadRecord {}),
-			testCase "update not present record field" (fromIOPasses $ (return $! ((BadRecord {}) { otherfld = "hai" })) >> return ()),
+			testCase "use uninitialized record field" (fromIOPasses $ print $ badfld BadRecord {}),
+			testCase "use not present record field" (fromIOPasses $ print $ otherfld BadRecord {}),
+			testCase "update not present record field" (fromIOPasses $ void (return $! (BadRecord {} { otherfld = "hai" }))),
 			testCase "TypeError" (fromIOPasses $ throwIO $ TypeError "boo")
 		],
 		testGroup "fromIO passes through termination" [
-			testCase "exitSuccess" (fromIOPasses $ exitSuccess),
-			testCase "exitFailure" (fromIOPasses $ exitFailure),
+			testCase "exitSuccess" (fromIOPasses exitSuccess),
+			testCase "exitFailure" (fromIOPasses exitFailure),
 			testCase "die" (fromIOPasses $ die "exit time")
 		],
 		testGroup "fromIO passes through asynchronous exceptions from the runtime" [
