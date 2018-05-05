@@ -25,6 +25,9 @@ import Control.Monad.Fix (MonadFix(..))
 import Data.Dynamic (Dynamic)
 import System.Exit (ExitCode)
 import qualified Control.Exception as Ex
+#if MIN_VERSION_base(4,11,0)
+import qualified Control.Exception.Base as Ex
+#endif
 
 type SomeException = Ex.SomeException
 
@@ -131,6 +134,9 @@ syncIO a = Ex.catches (fmap Right a) [
 #endif
 #if MIN_VERSION_base(4,10,0)
 		Ex.Handler (\e -> Ex.throwIO (e :: Ex.CompactionFailed)),
+#endif
+#if MIN_VERSION_base(4,11,0)
+        Ex.Handler (\e -> Ex.throwIO (e :: Ex.FixIOException)),
 #endif
 		Ex.Handler (return . Left)
 	]
