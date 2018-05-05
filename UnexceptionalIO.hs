@@ -109,26 +109,26 @@ unsafeFromIO = UIO
 syncIO :: IO a -> IO (Either SomeException a)
 #ifdef __GLASGOW_HASKELL__
 syncIO a = Ex.catches (fmap Right a) [
+#if MIN_VERSION_base(4,7,0)
+		Ex.Handler (\e -> Ex.throwIO (e :: Ex.SomeAsyncException)),
+#else
+		Ex.Handler (\e -> Ex.throwIO (e :: Ex.AsyncException)),
+#endif
+		Ex.Handler (\e -> Ex.throwIO (e :: Ex.BlockedIndefinitelyOnSTM)),
+		Ex.Handler (\e -> Ex.throwIO (e :: Ex.BlockedIndefinitelyOnMVar)),
+		Ex.Handler (\e -> Ex.throwIO (e :: Ex.Deadlock)),
+		Ex.Handler (\e -> Ex.throwIO (e :: Ex.NonTermination)),
+		Ex.Handler (\e -> Ex.throwIO (e :: Ex.NestedAtomically)),
 		Ex.Handler (\e -> Ex.throwIO (e :: Ex.ArithException)),
 		Ex.Handler (\e -> Ex.throwIO (e :: Ex.ArrayException)),
 		Ex.Handler (\e -> Ex.throwIO (e :: Ex.AssertionFailed)),
-		Ex.Handler (\e -> Ex.throwIO (e :: Ex.AsyncException)),
-		Ex.Handler (\e -> Ex.throwIO (e :: Ex.BlockedIndefinitelyOnMVar)),
-		Ex.Handler (\e -> Ex.throwIO (e :: Ex.BlockedIndefinitelyOnSTM)),
-		Ex.Handler (\e -> Ex.throwIO (e :: Ex.Deadlock)),
-		Ex.Handler (\e -> Ex.throwIO (e :: Dynamic)),
 		Ex.Handler (\e -> Ex.throwIO (e :: Ex.ErrorCall)),
-		Ex.Handler (\e -> Ex.throwIO (e :: ExitCode)),
-		Ex.Handler (\e -> Ex.throwIO (e :: Ex.NestedAtomically)),
 		Ex.Handler (\e -> Ex.throwIO (e :: Ex.NoMethodError)),
-		Ex.Handler (\e -> Ex.throwIO (e :: Ex.NonTermination)),
 		Ex.Handler (\e -> Ex.throwIO (e :: Ex.PatternMatchFail)),
 		Ex.Handler (\e -> Ex.throwIO (e :: Ex.RecConError)),
 		Ex.Handler (\e -> Ex.throwIO (e :: Ex.RecSelError)),
 		Ex.Handler (\e -> Ex.throwIO (e :: Ex.RecUpdError)),
-#if MIN_VERSION_base(4,8,0)
-		Ex.Handler (\e -> Ex.throwIO (e :: Ex.AllocationLimitExceeded)),
-#endif
+		Ex.Handler (\e -> Ex.throwIO (e :: ExitCode)),
 #if MIN_VERSION_base(4,9,0)
 		Ex.Handler (\e -> Ex.throwIO (e :: Ex.TypeError)),
 #endif
