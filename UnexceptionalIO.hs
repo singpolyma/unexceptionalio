@@ -136,7 +136,7 @@ syncIO a = Ex.catches (fmap Right a) [
 		Ex.Handler (\e -> Ex.throwIO (e :: Ex.CompactionFailed)),
 #endif
 #if MIN_VERSION_base(4,11,0)
-        Ex.Handler (\e -> Ex.throwIO (e :: Ex.FixIOException)),
+		Ex.Handler (\e -> Ex.throwIO (e :: Ex.FixIOException)),
 #endif
 		Ex.Handler (return . Left)
 	]
