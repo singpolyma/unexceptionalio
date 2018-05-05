@@ -5,7 +5,6 @@ import Test.HUnit hiding (Test, assert)
 import Control.Monad
 import Control.Exception
 import System.Exit
-import Data.Array
 
 import UnexceptionalIO
 
@@ -47,7 +46,8 @@ tests =
 			testCase "ArithException" (fromIOPasses $ void (return $! 1 `div` 0)),
 			testCase "assert" (fromIOPasses $ assert False (return ())),
 			testCase "pattern match fail" (fromIOPasses $ (\(Just x) -> return ()) Nothing),
-			testCase "array out of bounds" (fromIOPasses $ void (return $! (listArray (0,1) [0..] ! 100))),
+			testCase "array out of bounds" (fromIOPasses $ throwIO $ IndexOutOfBounds "boo"),
+			testCase "array uninitialized" (fromIOPasses $ throwIO $ UndefinedElement "boo"),
 			testCase "no method" (fromIOPasses $ print CantShow),
 			testCase "use uninitialized record field" (fromIOPasses $ print $ badfld BadRecord {}),
 			testCase "use not present record field" (fromIOPasses $ print $ otherfld BadRecord {}),
