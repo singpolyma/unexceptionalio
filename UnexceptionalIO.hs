@@ -105,7 +105,7 @@ fromIO' =
 unsafeFromIO :: IO a -> UIO a
 unsafeFromIO = UIO
 
--- | Catch all exceptions, except for asynchronous exceptions found in @base@
+-- | Catch all exceptions, except for error or asynchronous exceptions found in @base@
 syncIO :: IO a -> IO (Either SomeException a)
 #ifdef __GLASGOW_HASKELL__
 syncIO a = Ex.catches (fmap Right a) [
