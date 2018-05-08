@@ -194,7 +194,7 @@ instance MonadFix UIO where
 	mfix f = UIO (mfix $ runUIO . f)
 
 -- | Polymorphic base without any 'PseudoException'
-class Unexceptional m where
+class (Monad m) => Unexceptional m where
 	liftUIO :: UIO a -> m a
 
 instance Unexceptional UIO where
@@ -204,7 +204,7 @@ instance Unexceptional IO where
 	liftUIO = runUIO
 
 -- | Catch any exception but 'PseudoException' in an 'IO' action
-fromIO :: IO a -> UIO (Either SomeNonPseudoException a)
+fromIO :: (Unexceptional m) => IO a -> m (Either SomeNonPseudoException a)
 fromIO = unsafeFromIO . try
 
 -- | Re-embed 'UIO' into 'IO'
@@ -224,7 +224,7 @@ runEitherIO = either throwIO return <=< runUIO
 --   thrown by this 'IO' action
 --
 -- This function is partial if you lie
-fromIO' :: (Ex.Exception e) => IO a -> UIO (Either e a)
+fromIO' :: (Ex.Exception e, Unexceptional m) => IO a -> m (Either e a)
 fromIO' =
 	(return . either (Left . maybePartial . Ex.fromException . Ex.toException) Right) <=< fromIO
 	where
@@ -233,5 +233,5 @@ fromIO' =
 #endif
 
 -- | You promise there are no exceptions by 'PseudoException' thrown by this 'IO' action
-unsafeFromIO :: IO a -> UIO a
-unsafeFromIO = UIO
+unsafeFromIO :: (Unexceptional m) => IO a -> m a
+unsafeFromIO = liftUIO . UIO
