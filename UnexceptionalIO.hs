@@ -186,7 +186,7 @@ throwIO :: SomeNonPseudoException -> IO a
 throwIO = ioError
 #endif
 
--- | IO without any 'PseudoException'
+-- | Like IO, but throws only 'PseudoException'
 newtype UIO a = UIO (IO a)
 
 instance Functor UIO where
@@ -205,7 +205,7 @@ instance Monad UIO where
 instance MonadFix UIO where
 	mfix f = UIO (mfix $ run . f)
 
--- | Polymorphic base without any 'PseudoException'
+-- | Monads in which 'UIO' computations may be embedded
 class (Monad m) => Unexceptional m where
 	lift :: UIO a -> m a
 
