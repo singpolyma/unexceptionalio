@@ -5,3 +5,6 @@ It is intended that you use qualified imports with this library.
 
 > import UnexceptionalIO (UIO)
 > import qualified UnexceptionalIO as UIO
+
+You may also with to investigate unexceptionalio-trans if you like
+monad transformers.

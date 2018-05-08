@@ -1,5 +1,5 @@
 name:            unexceptionalio
-version:         0.3.0
+version:         0.4.0
 cabal-version:   >=1.8
 license:         OtherLicense
 license-file:    COPYING
@@ -20,6 +20,9 @@ description:
         .
         > import UnexceptionalIO (UIO)
         > import qualified UnexceptionalIO as UIO
+        .
+        You may also with to investigate unexceptionalio-trans if you like
+        monad transformers.
 
 library
         exposed-modules:
