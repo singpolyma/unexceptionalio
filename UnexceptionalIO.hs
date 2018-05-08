@@ -14,22 +14,153 @@ module UnexceptionalIO (
 	fromIO',
 #endif
 	unsafeFromIO,
-	-- * Utilities
-	syncIO
+	-- * Pseudo exceptions
+	SomeNonPseudoException,
+#ifdef __GLASGOW_HASKELL__
+	PseudoException(..),
+	ProgrammerError(..),
+	ExternalError(..)
+#endif
 ) where
 
-import Control.Applicative (Applicative(..))
+import Control.Applicative (Applicative(..), (<|>))
 import Control.Monad (liftM, ap, (<=<))
 import Control.Monad.Fix (MonadFix(..))
 #ifdef __GLASGOW_HASKELL__
-import Data.Dynamic (Dynamic)
 import System.Exit (ExitCode)
+import Control.Exception (try)
 import qualified Control.Exception as Ex
 #if MIN_VERSION_base(4,11,0)
 import qualified Control.Exception.Base as Ex
 #endif
 
-type SomeException = Ex.SomeException
+-- | Not everything handled by the exception system is a run-time error
+-- you can handle.  This is the class of pseudo-exceptions you usually
+-- can do nothing about, just log or exit.
+--
+-- Additionally, except for 'ExitCode' any of these psuedo-exceptions
+-- you could never guarentee to have caught, since they can come
+-- from anywhere at any time, we could never guarentee that 'UIO' does
+-- not contain them.
+data PseudoException =
+	ProgrammerError ProgrammerError | -- ^ Mistakes programmers make
+	ExternalError   ExternalError   | -- ^ Errors thrown by the runtime
+	Exit ExitCode                     -- ^ Process exit requests
+	deriving (Show)
+
+instance Ex.Exception PseudoException where
+	toException (ProgrammerError e) = Ex.toException e
+	toException (ExternalError e)   = Ex.toException e
+	toException (Exit e)            = Ex.toException e
+
+	fromException e =
+		ProgrammerError <$> Ex.fromException e <|>
+		ExternalError   <$> Ex.fromException e <|>
+		Exit            <$> Ex.fromException e
+
+-- | Pseudo-exceptions caused by a programming error
+--
+-- Partial functions, 'error', 'undefined', etc
+data ProgrammerError =
+#if MIN_VERSION_base(4,9,0)
+	TypeError Ex.TypeError               |
+#endif
+	ArithException Ex.ArithException     |
+	ArrayException Ex.ArrayException     |
+	AssertionFailed Ex.AssertionFailed   |
+	ErrorCall Ex.ErrorCall               |
+	NestedAtomically Ex.NestedAtomically |
+	NoMethodError Ex.NoMethodError       |
+	PatternMatchFail Ex.PatternMatchFail |
+	RecConError Ex.RecConError           |
+	RecSelError Ex.RecSelError           |
+	RecUpdError Ex.RecSelError
+	deriving (Show)
+
+instance Ex.Exception ProgrammerError where
+#if MIN_VERSION_base(4,9,0)
+	toException (TypeError e)           = Ex.toException e
+#endif
+	toException (ArithException e)      = Ex.toException e
+	toException (ArrayException e)      = Ex.toException e
+	toException (AssertionFailed e)     = Ex.toException e
+	toException (ErrorCall e)           = Ex.toException e
+	toException (NestedAtomically e)    = Ex.toException e
+	toException (NoMethodError e)       = Ex.toException e
+	toException (PatternMatchFail e)    = Ex.toException e
+	toException (RecConError e)         = Ex.toException e
+	toException (RecSelError e)         = Ex.toException e
+	toException (RecUpdError e)         = Ex.toException e
+
+	fromException e =
+#if MIN_VERSION_base(4,9,0)
+		TypeError        <$> Ex.fromException e <|>
+#endif
+		ArithException   <$> Ex.fromException e <|>
+		ArrayException   <$> Ex.fromException e <|>
+		AssertionFailed  <$> Ex.fromException e <|>
+		ErrorCall        <$> Ex.fromException e <|>
+		NestedAtomically <$> Ex.fromException e <|>
+		NoMethodError    <$> Ex.fromException e <|>
+		PatternMatchFail <$> Ex.fromException e <|>
+		RecConError      <$> Ex.fromException e <|>
+		RecSelError      <$> Ex.fromException e <|>
+		RecUpdError      <$> Ex.fromException e
+
+-- | Pseudo-exceptions thrown by the runtime environment
+data ExternalError =
+#if MIN_VERSION_base(4,10,0)
+	CompactionFailed Ex.CompactionFailed                   |
+#endif
+#if MIN_VERSION_base(4,11,0)
+	FixIOException Ex.FixIOException                       |
+#endif
+#if MIN_VERSION_base(4,7,0)
+	AsyncException Ex.SomeAsyncException                   |
+#else
+	AsyncException Ex.AsyncException                       |
+#endif
+	BlockedIndefinitelyOnSTM Ex.BlockedIndefinitelyOnSTM   |
+	BlockedIndefinitelyOnMVar Ex.BlockedIndefinitelyOnMVar |
+	Deadlock Ex.Deadlock                                   |
+	NonTermination Ex.NonTermination
+	deriving (Show)
+
+instance Ex.Exception ExternalError where
+#if MIN_VERSION_base(4,10,0)
+	toException (CompactionFailed e)          = Ex.toException e
+#endif
+#if MIN_VERSION_base(4,11,0)
+	toException (FixIOException e)            = Ex.toException e
+#endif
+	toException (AsyncException e)            = Ex.toException e
+	toException (BlockedIndefinitelyOnMVar e) = Ex.toException e
+	toException (BlockedIndefinitelyOnSTM e)  = Ex.toException e
+	toException (Deadlock e)                  = Ex.toException e
+	toException (NonTermination e)            = Ex.toException e
+
+	fromException e =
+#if MIN_VERSION_base(4,10,0)
+		CompactionFailed          <$> Ex.fromException e <|>
+#endif
+#if MIN_VERSION_base(4,11,0)
+		FixIOException            <$> Ex.fromException e <|>
+#endif
+		AsyncException            <$> Ex.fromException e <|>
+		BlockedIndefinitelyOnSTM  <$> Ex.fromException e <|>
+		BlockedIndefinitelyOnMVar <$> Ex.fromException e <|>
+		Deadlock                  <$> Ex.fromException e <|>
+		NonTermination            <$> Ex.fromException e
+
+-- | Every 'Ex.SomeException' but 'PseudoException'
+newtype SomeNonPseudoException = SomeNonPseudoException Ex.SomeException deriving (Show)
+
+instance Ex.Exception SomeNonPseudoException where
+	toException (SomeNonPseudoException e) = e
+
+	fromException e = case Ex.fromException e of
+		Just pseudo -> const Nothing (pseudo :: PseudoException)
+		Nothing -> Just (SomeNonPseudoException e)
 
 throwIO :: (Ex.Exception e) => e -> IO a
 throwIO = Ex.throwIO
@@ -37,13 +168,13 @@ throwIO = Ex.throwIO
 -- Haskell98 import 'IO' instead
 import System.IO.Error (IOError, ioError, try)
 
-type SomeException = IOError
+type SomeNonPseudoException = IOError
 
-throwIO :: SomeException -> IO a
+throwIO :: SomeNonPseudoException -> IO a
 throwIO = ioError
 #endif
 
--- | IO without any non-error, synchronous exceptions
+-- | IO without any 'PseudoException'
 newtype UIO a = UIO (IO a)
 
 instance Functor UIO where
@@ -62,7 +193,7 @@ instance Monad UIO where
 instance MonadFix UIO where
 	mfix f = UIO (mfix $ runUIO . f)
 
--- | Polymorphic base without any non-error, synchronous exceptions
+-- | Polymorphic base without any 'PseudoException'
 class Unexceptional m where
 	liftUIO :: UIO a -> m a
 
@@ -72,9 +203,9 @@ instance Unexceptional UIO where
 instance Unexceptional IO where
 	liftUIO = runUIO
 
--- | Catch any non-error, synchronous exceptions in an 'IO' action
-fromIO :: IO a -> UIO (Either SomeException a)
-fromIO = unsafeFromIO . syncIO
+-- | Catch any exception but 'PseudoException' in an 'IO' action
+fromIO :: IO a -> UIO (Either SomeNonPseudoException a)
+fromIO = unsafeFromIO . try
 
 -- | Re-embed 'UIO' into 'IO'
 runUIO :: UIO a -> IO a
@@ -84,62 +215,23 @@ runUIO (UIO io) = io
 #ifdef __GLASGOW_HASKELL__
 runEitherIO :: (Ex.Exception e) => UIO (Either e a) -> IO a
 #else
-runEitherIO :: UIO (Either SomeException a) -> IO a
+runEitherIO :: UIO (Either SomeNonPseudoException a) -> IO a
 #endif
 runEitherIO = either throwIO return <=< runUIO
 
 #ifdef __GLASGOW_HASKELL__
--- | You promise that 'e' covers all non-error, synchronous exceptions
+-- | You promise that 'e' covers all exceptions but 'PseudoException'
 --   thrown by this 'IO' action
 --
 -- This function is partial if you lie
 fromIO' :: (Ex.Exception e) => IO a -> UIO (Either e a)
 fromIO' =
-	(return . either (Left . maybePartial . Ex.fromException) Right) <=< fromIO
+	(return . either (Left . maybePartial . Ex.fromException . Ex.toException) Right) <=< fromIO
 	where
 	maybePartial (Just x) = x
 	maybePartial Nothing = error "UnexceptionalIO.fromIO' exception of unspecified type"
 #endif
 
--- | You promise there are no exceptions thrown by this 'IO' action
+-- | You promise there are no exceptions by 'PseudoException' thrown by this 'IO' action
 unsafeFromIO :: IO a -> UIO a
 unsafeFromIO = UIO
-
--- | Catch all exceptions, except for error or asynchronous exceptions found in @base@
-syncIO :: IO a -> IO (Either SomeException a)
-#ifdef __GLASGOW_HASKELL__
-syncIO a = Ex.catches (fmap Right a) [
-#if MIN_VERSION_base(4,7,0)
-		Ex.Handler (\e -> Ex.throwIO (e :: Ex.SomeAsyncException)),
-#else
-		Ex.Handler (\e -> Ex.throwIO (e :: Ex.AsyncException)),
-#endif
-		Ex.Handler (\e -> Ex.throwIO (e :: Ex.BlockedIndefinitelyOnSTM)),
-		Ex.Handler (\e -> Ex.throwIO (e :: Ex.BlockedIndefinitelyOnMVar)),
-		Ex.Handler (\e -> Ex.throwIO (e :: Ex.Deadlock)),
-		Ex.Handler (\e -> Ex.throwIO (e :: Ex.NonTermination)),
-		Ex.Handler (\e -> Ex.throwIO (e :: Ex.NestedAtomically)),
-		Ex.Handler (\e -> Ex.throwIO (e :: Ex.ArithException)),
-		Ex.Handler (\e -> Ex.throwIO (e :: Ex.ArrayException)),
-		Ex.Handler (\e -> Ex.throwIO (e :: Ex.AssertionFailed)),
-		Ex.Handler (\e -> Ex.throwIO (e :: Ex.ErrorCall)),
-		Ex.Handler (\e -> Ex.throwIO (e :: Ex.NoMethodError)),
-		Ex.Handler (\e -> Ex.throwIO (e :: Ex.PatternMatchFail)),
-		Ex.Handler (\e -> Ex.throwIO (e :: Ex.RecConError)),
-		Ex.Handler (\e -> Ex.throwIO (e :: Ex.RecSelError)),
-		Ex.Handler (\e -> Ex.throwIO (e :: Ex.RecUpdError)),
-		Ex.Handler (\e -> Ex.throwIO (e :: ExitCode)),
-#if MIN_VERSION_base(4,9,0)
-		Ex.Handler (\e -> Ex.throwIO (e :: Ex.TypeError)),
-#endif
-#if MIN_VERSION_base(4,10,0)
-		Ex.Handler (\e -> Ex.throwIO (e :: Ex.CompactionFailed)),
-#endif
-#if MIN_VERSION_base(4,11,0)
-		Ex.Handler (\e -> Ex.throwIO (e :: Ex.FixIOException)),
-#endif
-		Ex.Handler (return . Left)
-	]
-#else
-syncIO = try
-#endif

@@ -3,7 +3,7 @@ import Test.Framework.Providers.HUnit
 import Test.HUnit hiding (Test, assert)
 
 import Control.Monad
-import Control.Exception
+import Control.Exception as Ex
 import System.Exit
 
 import UnexceptionalIO
@@ -52,7 +52,7 @@ tests =
 			testCase "use uninitialized record field" (fromIOPasses $ print $ badfld BadRecord {}),
 			testCase "use not present record field" (fromIOPasses $ print $ otherfld BadRecord {}),
 			testCase "update not present record field" (fromIOPasses $ void (return $! (BadRecord {} { otherfld = "hai" }))),
-			testCase "TypeError" (fromIOPasses $ throwIO $ TypeError "boo")
+			testCase "TypeError" (fromIOPasses $ throwIO $ Ex.TypeError "boo")
 		],
 		testGroup "fromIO passes through termination" [
 			testCase "exitSuccess" (fromIOPasses exitSuccess),
@@ -60,16 +60,16 @@ tests =
 			testCase "die" (fromIOPasses $ die "exit time")
 		],
 		testGroup "fromIO passes through asynchronous exceptions from the runtime" [
-			testCase "NonTermination" (fromIOPasses $ throwIO NonTermination),
-			testCase "StackOverflow" (fromIOPasses $ throwIO StackOverflow),
-			testCase "HeapOverflow" (fromIOPasses $ throwIO HeapOverflow),
-			testCase "ThreadKilled" (fromIOPasses $ throwIO ThreadKilled),
-			testCase "UserInterrupt" (fromIOPasses $ throwIO UserInterrupt),
-			testCase "BlockedIndefinitelyOnMVar" (fromIOPasses $ throwIO BlockedIndefinitelyOnMVar),
-			testCase "BlockedIndefinitelyOnSTM" (fromIOPasses $ throwIO BlockedIndefinitelyOnSTM),
-			testCase "Deadlock" (fromIOPasses $ throwIO Deadlock),
-			testCase "NestedAtomically" (fromIOPasses $ throwIO NestedAtomically),
-			testCase "AllocationLimitExceeded" (fromIOPasses $ throwIO AllocationLimitExceeded)
+			testCase "NonTermination" (fromIOPasses $ throwIO Ex.NonTermination),
+			testCase "StackOverflow" (fromIOPasses $ throwIO Ex.StackOverflow),
+			testCase "HeapOverflow" (fromIOPasses $ throwIO Ex.HeapOverflow),
+			testCase "ThreadKilled" (fromIOPasses $ throwIO Ex.ThreadKilled),
+			testCase "UserInterrupt" (fromIOPasses $ throwIO Ex.UserInterrupt),
+			testCase "BlockedIndefinitelyOnMVar" (fromIOPasses $ throwIO Ex.BlockedIndefinitelyOnMVar),
+			testCase "BlockedIndefinitelyOnSTM" (fromIOPasses $ throwIO Ex.BlockedIndefinitelyOnSTM),
+			testCase "Deadlock" (fromIOPasses $ throwIO Ex.Deadlock),
+			testCase "NestedAtomically" (fromIOPasses $ throwIO Ex.NestedAtomically),
+			testCase "AllocationLimitExceeded" (fromIOPasses $ throwIO Ex.AllocationLimitExceeded)
 		]
 	]
 
