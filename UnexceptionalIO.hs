@@ -3,11 +3,16 @@
 --   this is what you're left with.
 --
 -- > runEitherIO . fromIO ≡ id
+--
+-- It is intended that you use qualified imports with this library.
+--
+-- > import UnexceptionalIO (UIO)
+-- > import qualified UnexceptionalIO as UIO
 module UnexceptionalIO (
 	UIO,
 	Unexceptional(..),
 	fromIO,
-	runUIO,
+	run,
 	runEitherIO,
 	-- * Unsafe entry points
 #ifdef __GLASGOW_HASKELL__
@@ -186,30 +191,30 @@ instance Applicative UIO where
 
 instance Monad UIO where
 	return = UIO . return
-	(UIO x) >>= f = UIO (x >>= runUIO . f)
+	(UIO x) >>= f = UIO (x >>= run . f)
 
 	fail s = error $ "UnexceptionalIO cannot fail (" ++ s ++ ")"
 
 instance MonadFix UIO where
-	mfix f = UIO (mfix $ runUIO . f)
+	mfix f = UIO (mfix $ run . f)
 
 -- | Polymorphic base without any 'PseudoException'
 class (Monad m) => Unexceptional m where
-	liftUIO :: UIO a -> m a
+	lift :: UIO a -> m a
 
 instance Unexceptional UIO where
-	liftUIO = id
+	lift = id
 
 instance Unexceptional IO where
-	liftUIO = runUIO
+	lift = run
 
 -- | Catch any exception but 'PseudoException' in an 'IO' action
 fromIO :: (Unexceptional m) => IO a -> m (Either SomeNonPseudoException a)
 fromIO = unsafeFromIO . try
 
 -- | Re-embed 'UIO' into 'IO'
-runUIO :: UIO a -> IO a
-runUIO (UIO io) = io
+run :: UIO a -> IO a
+run (UIO io) = io
 
 -- | Re-embed 'UIO' and possible exception back into 'IO'
 #ifdef __GLASGOW_HASKELL__
@@ -217,7 +222,7 @@ runEitherIO :: (Ex.Exception e) => UIO (Either e a) -> IO a
 #else
 runEitherIO :: UIO (Either SomeNonPseudoException a) -> IO a
 #endif
-runEitherIO = either throwIO return <=< runUIO
+runEitherIO = either throwIO return <=< run
 
 #ifdef __GLASGOW_HASKELL__
 -- | You promise that 'e' covers all exceptions but 'PseudoException'
@@ -234,4 +239,4 @@ fromIO' =
 
 -- | You promise there are no exceptions by 'PseudoException' thrown by this 'IO' action
 unsafeFromIO :: (Unexceptional m) => IO a -> m a
-unsafeFromIO = liftUIO . UIO
+unsafeFromIO = lift . UIO
