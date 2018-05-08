@@ -14,11 +14,6 @@ module UnexceptionalIO (
 	fromIO,
 	run,
 	runEitherIO,
-	-- * Unsafe entry points
-#ifdef __GLASGOW_HASKELL__
-	fromIO',
-#endif
-	unsafeFromIO,
 	-- * Pseudo exceptions
 	SomeNonPseudoException,
 #ifdef __GLASGOW_HASKELL__
@@ -32,6 +27,11 @@ module UnexceptionalIO (
 	fork
 #endif
 #endif
+	-- * Unsafe entry points
+#ifdef __GLASGOW_HASKELL__
+	unsafeWrapIO,
+#endif
+	unsafeFromIO,
 ) where
 
 import Control.Applicative (Applicative(..), (<|>))
@@ -236,12 +236,12 @@ runEitherIO = either throwIO return <=< run
 --   thrown by this 'IO' action
 --
 -- This function is partial if you lie
-fromIO' :: (Ex.Exception e, Unexceptional m) => IO a -> m (Either e a)
-fromIO' =
+unsafeWrapIO :: (Ex.Exception e, Unexceptional m) => IO a -> m (Either e a)
+unsafeWrapIO =
 	(return . either (Left . maybePartial . Ex.fromException . Ex.toException) Right) <=< fromIO
 	where
 	maybePartial (Just x) = x
-	maybePartial Nothing = error "UnexceptionalIO.fromIO' exception of unspecified type"
+	maybePartial Nothing = error "UnexceptionalIO.unsafeWrapIO exception of unspecified type"
 #endif
 
 -- | You promise there are no exceptions but 'PseudoException' thrown by this 'IO' action
