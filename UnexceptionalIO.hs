@@ -244,7 +244,7 @@ fromIO' =
 	maybePartial Nothing = error "UnexceptionalIO.fromIO' exception of unspecified type"
 #endif
 
--- | You promise there are no exceptions by 'PseudoException' thrown by this 'IO' action
+-- | You promise there are no exceptions but 'PseudoException' thrown by this 'IO' action
 unsafeFromIO :: (Unexceptional m) => IO a -> m a
 unsafeFromIO = lift . UIO
 
