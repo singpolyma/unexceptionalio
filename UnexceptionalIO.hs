@@ -24,7 +24,13 @@ module UnexceptionalIO (
 #ifdef __GLASGOW_HASKELL__
 	PseudoException(..),
 	ProgrammerError(..),
-	ExternalError(..)
+	ExternalError(..),
+	-- * Pseudo exception helpers
+	bracket,
+#if MIN_VERSION_base(4,6,0)
+	forkFinally,
+	fork
+#endif
 #endif
 ) where
 
@@ -35,6 +41,7 @@ import Control.Monad.Fix (MonadFix(..))
 import System.Exit (ExitCode)
 import Control.Exception (try)
 import qualified Control.Exception as Ex
+import qualified Control.Concurrent as Concurrent
 #if MIN_VERSION_base(4,11,0)
 import qualified Control.Exception.Base as Ex
 #endif
@@ -240,3 +247,31 @@ fromIO' =
 -- | You promise there are no exceptions by 'PseudoException' thrown by this 'IO' action
 unsafeFromIO :: (Unexceptional m) => IO a -> m a
 unsafeFromIO = lift . UIO
+
+#ifdef __GLASGOW_HASKELL__
+-- | When you're doing resource handling, 'PseudoException' matters.
+--   You still need to use the 'Ex.bracket' pattern to handle cleanup.
+bracket :: (Unexceptional m) => UIO a -> (a -> UIO ()) -> (a -> UIO c) -> m c
+bracket acquire release body =
+	unsafeFromIO $ Ex.bracket (run acquire) (run . release) (run . body)
+
+#if MIN_VERSION_base(4,6,0)
+-- | Mirrors 'Concurrent.forkFinally', but since the body is 'UIO',
+--   the thread must terminate successfully or because of 'PseudoException'
+forkFinally :: (Unexceptional m) => UIO a -> (Either PseudoException a -> UIO ()) -> m Concurrent.ThreadId
+forkFinally body handler = unsafeFromIO $ Concurrent.forkFinally (run body) $ \result ->
+	case result of
+		Left e -> case Ex.fromException e of
+			Just pseudo -> run $ handler $ Left pseudo
+			Nothing -> error $ "Bug in UnexceptionalIO: forkFinally caught a non-PseudoException: " ++ show e
+		Right x -> run $ handler $ Right x
+
+-- | Mirrors 'Concurrent.forkIO', but re-throws any 'PseudoException'
+--   to the parent thread
+fork :: (Unexceptional m) => UIO () -> m Concurrent.ThreadId
+fork body = do
+	parent <- unsafeFromIO Concurrent.myThreadId
+	forkFinally body $
+		either (unsafeFromIO . Concurrent.throwTo parent) (const $ return ())
+#endif
+#endif
