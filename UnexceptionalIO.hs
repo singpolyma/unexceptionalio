@@ -271,7 +271,10 @@ forkFinally body handler = unsafeFromIO $ Concurrent.forkFinally (run body) $ \r
 fork :: (Unexceptional m) => UIO () -> m Concurrent.ThreadId
 fork body = do
 	parent <- unsafeFromIO Concurrent.myThreadId
-	forkFinally body $
-		either (unsafeFromIO . Concurrent.throwTo parent) (const $ return ())
+	forkFinally body $ either (handler parent) (const $ return ())
+	where
+	handler parent e
+		| Just Ex.ThreadKilled <- Ex.fromException (Ex.toException e) = return ()
+		| otherwise = unsafeFromIO $ Concurrent.throwTo parent e
 #endif
 #endif
