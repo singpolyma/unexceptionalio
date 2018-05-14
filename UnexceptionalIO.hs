@@ -12,12 +12,12 @@ module UnexceptionalIO (
 	UIO,
 	Unexceptional(..),
 	fromIO,
-	run,
-	runEitherIO,
-	-- * Unsafe entry points
 #ifdef __GLASGOW_HASKELL__
 	fromIO',
 #endif
+	run,
+	runEitherIO,
+	-- * Unsafe entry points
 	unsafeFromIO,
 	-- * Pseudo exceptions
 	SomeNonPseudoException,
@@ -34,6 +34,7 @@ module UnexceptionalIO (
 #endif
 ) where
 
+import Data.Maybe (fromMaybe)
 import Control.Applicative (Applicative(..), (<|>))
 import Control.Monad (liftM, ap, (<=<))
 import Control.Monad.Fix (MonadFix(..))
@@ -219,6 +220,18 @@ instance Unexceptional IO where
 fromIO :: (Unexceptional m) => IO a -> m (Either SomeNonPseudoException a)
 fromIO = unsafeFromIO . try
 
+#ifdef __GLASGOW_HASKELL__
+-- | Catch any 'e' in an 'IO' action, with a default mapping for
+--   unexpected cases
+fromIO' :: (Ex.Exception e, Unexceptional m) =>
+	(SomeNonPseudoException -> e) -- ^ Default if an unexpected exception occurs
+	-> IO a
+	-> m (Either e a)
+fromIO' f = (return . either (\e -> Left $ fromMaybe (f e) $ castException e) Right) <=< fromIO
+	where
+	castException = Ex.fromException . Ex.toException
+#endif
+
 -- | Re-embed 'UIO' into 'IO'
 run :: UIO a -> IO a
 run (UIO io) = io
@@ -230,19 +243,6 @@ runEitherIO :: (Ex.Exception e) => UIO (Either e a) -> IO a
 runEitherIO :: UIO (Either SomeNonPseudoException a) -> IO a
 #endif
 runEitherIO = either throwIO return <=< run
-
-#ifdef __GLASGOW_HASKELL__
--- | You promise that 'e' covers all exceptions but 'PseudoException'
---   thrown by this 'IO' action
---
--- This function is partial if you lie
-fromIO' :: (Ex.Exception e, Unexceptional m) => IO a -> m (Either e a)
-fromIO' =
-	(return . either (Left . maybePartial . Ex.fromException . Ex.toException) Right) <=< fromIO
-	where
-	maybePartial (Just x) = x
-	maybePartial Nothing = error "UnexceptionalIO.fromIO' exception of unspecified type"
-#endif
 
 -- | You promise there are no exceptions but 'PseudoException' thrown by this 'IO' action
 unsafeFromIO :: (Unexceptional m) => IO a -> m a
