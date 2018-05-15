@@ -31,6 +31,17 @@ library
         build-depends:
                 base == 4.*
 
+test-suite tests
+        type:        exitcode-stdio-1.0
+        main-is:     tests/suite.hs
+        ghc-options: -O0
+
+        build-depends:
+                base == 4.*,
+                HUnit,
+                test-framework,
+                test-framework-hunit
+
 source-repository head
         type:     git
         location: git://github.com/singpolyma/unexceptionalio.git
