@@ -6,19 +6,22 @@ import Control.Monad
 import Control.Exception as Ex
 import System.Exit
 
-import UnexceptionalIO
+import qualified UnexceptionalIO as UIO
 
 data CustomException = CustomException deriving (Show)
 instance Exception CustomException
 
-data CantShow = CantShow
-instance Show CantShow
+class TestClass a where
+	testClassMethod :: a -> ()
+
+data CantTestClass = CantTestClass
+instance TestClass CantTestClass
 
 data BadRecord = BadRecord { badfld :: String } | OtherBadRecord { otherfld :: String }
 
 fromIOCatches :: IO () -> Assertion
 fromIOCatches io = do
-	caught <- runUIO $ fromIO io
+	caught <- UIO.run $ UIO.fromIO io
 	either
 		(const $ return ())
 		(\x -> assertFailure $ "fromIO did not catch: " ++ show x)
@@ -26,7 +29,7 @@ fromIOCatches io = do
 
 fromIOPasses :: IO () -> Assertion
 fromIOPasses io = do
-	caught <- try $ runUIO $ fromIO io
+	caught <- try $ UIO.run $ UIO.fromIO io
 	either
 		(\(SomeException _) -> return ())
 		(\x -> assertFailure $ "fromIO caught: " ++ show x)
@@ -48,7 +51,7 @@ tests =
 			testCase "pattern match fail" (fromIOPasses $ (\(Just x) -> return ()) Nothing),
 			testCase "array out of bounds" (fromIOPasses $ throwIO $ IndexOutOfBounds "boo"),
 			testCase "array uninitialized" (fromIOPasses $ throwIO $ UndefinedElement "boo"),
-			testCase "no method" (fromIOPasses $ print CantShow),
+			testCase "no method" (fromIOPasses $ print $ testClassMethod CantTestClass),
 			testCase "use uninitialized record field" (fromIOPasses $ print $ badfld BadRecord {}),
 			testCase "use not present record field" (fromIOPasses $ print $ otherfld BadRecord {}),
 			testCase "update not present record field" (fromIOPasses $ void (return $! (BadRecord {} { otherfld = "hai" }))),
