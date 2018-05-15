@@ -46,6 +46,9 @@ tests =
 			testCase "CustomException" (fromIOCatches $ throwIO CustomException)
 		],
 		testGroup "fromIO passes through programmer errors" [
+#if MIN_VERSION_base(4,9,0)
+			testCase "TypeError" (fromIOPasses $ throwIO $ Ex.TypeError "boo"),
+#endif
 			testCase "error" (fromIOPasses $ error "boo"),
 			testCase "undefined" (fromIOPasses undefined),
 			testCase "ArithException" (fromIOPasses $ void (return $! 1 `div` 0)),
@@ -56,15 +59,19 @@ tests =
 			testCase "no method" (fromIOPasses $ print $ testClassMethod CantTestClass),
 			testCase "use uninitialized record field" (fromIOPasses $ print $ badfld BadRecord {}),
 			testCase "use not present record field" (fromIOPasses $ print $ otherfld BadRecord {}),
-			testCase "update not present record field" (fromIOPasses $ void (return $! (BadRecord {} { otherfld = "hai" }))),
-			testCase "TypeError" (fromIOPasses $ throwIO $ Ex.TypeError "boo")
+			testCase "update not present record field" (fromIOPasses $ void (return $! (BadRecord {} { otherfld = "hai" })))
 		],
 		testGroup "fromIO passes through termination" [
+#if MIN_VERSION_base(4,8,0)
+			testCase "die" (fromIOPasses $ die "exit time"),
+#endif
 			testCase "exitSuccess" (fromIOPasses exitSuccess),
-			testCase "exitFailure" (fromIOPasses exitFailure),
-			testCase "die" (fromIOPasses $ die "exit time")
+			testCase "exitFailure" (fromIOPasses exitFailure)
 		],
 		testGroup "fromIO passes through asynchronous exceptions from the runtime" [
+#if MIN_VERSION_base(4,8,0)
+			testCase "AllocationLimitExceeded" (fromIOPasses $ throwIO Ex.AllocationLimitExceeded),
+#endif
 			testCase "NonTermination" (fromIOPasses $ throwIO Ex.NonTermination),
 			testCase "StackOverflow" (fromIOPasses $ throwIO Ex.StackOverflow),
 			testCase "HeapOverflow" (fromIOPasses $ throwIO Ex.HeapOverflow),
@@ -73,8 +80,7 @@ tests =
 			testCase "BlockedIndefinitelyOnMVar" (fromIOPasses $ throwIO Ex.BlockedIndefinitelyOnMVar),
 			testCase "BlockedIndefinitelyOnSTM" (fromIOPasses $ throwIO Ex.BlockedIndefinitelyOnSTM),
 			testCase "Deadlock" (fromIOPasses $ throwIO Ex.Deadlock),
-			testCase "NestedAtomically" (fromIOPasses $ throwIO Ex.NestedAtomically),
-			testCase "AllocationLimitExceeded" (fromIOPasses $ throwIO Ex.AllocationLimitExceeded)
+			testCase "NestedAtomically" (fromIOPasses $ throwIO Ex.NestedAtomically)
 		]
 	]
 
