@@ -1,4 +1,7 @@
 {-# LANGUAGE CPP #-}
+#ifdef __GLASGOW_HASKELL__
+{-# LANGUAGE DeriveDataTypeable #-}
+#endif
 -- | When you've caught all the exceptions that can be handled safely,
 --   this is what you're left with.
 --
@@ -41,6 +44,7 @@ import Control.Monad.Fix (MonadFix(..))
 #ifdef __GLASGOW_HASKELL__
 import System.Exit (ExitCode)
 import Control.Exception (try)
+import Data.Typeable (Typeable)
 import qualified Control.Exception as Ex
 import qualified Control.Concurrent as Concurrent
 #if MIN_VERSION_base(4,11,0)
@@ -59,7 +63,7 @@ data PseudoException =
 	ProgrammerError ProgrammerError | -- ^ Mistakes programmers make
 	ExternalError   ExternalError   | -- ^ Errors thrown by the runtime
 	Exit ExitCode                     -- ^ Process exit requests
-	deriving (Show)
+	deriving (Show, Typeable)
 
 instance Ex.Exception PseudoException where
 	toException (ProgrammerError e) = Ex.toException e
@@ -88,7 +92,7 @@ data ProgrammerError =
 	RecConError Ex.RecConError           |
 	RecSelError Ex.RecSelError           |
 	RecUpdError Ex.RecSelError
-	deriving (Show)
+	deriving (Show, Typeable)
 
 instance Ex.Exception ProgrammerError where
 #if MIN_VERSION_base(4,9,0)
@@ -137,7 +141,7 @@ data ExternalError =
 	BlockedIndefinitelyOnMVar Ex.BlockedIndefinitelyOnMVar |
 	Deadlock Ex.Deadlock                                   |
 	NonTermination Ex.NonTermination
-	deriving (Show)
+	deriving (Show, Typeable)
 
 instance Ex.Exception ExternalError where
 #if MIN_VERSION_base(4,10,0)
@@ -166,7 +170,7 @@ instance Ex.Exception ExternalError where
 		NonTermination            <$> Ex.fromException e
 
 -- | Every 'Ex.SomeException' but 'PseudoException'
-newtype SomeNonPseudoException = SomeNonPseudoException Ex.SomeException deriving (Show)
+newtype SomeNonPseudoException = SomeNonPseudoException Ex.SomeException deriving (Show, Typeable)
 
 instance Ex.Exception SomeNonPseudoException where
 	toException (SomeNonPseudoException e) = e

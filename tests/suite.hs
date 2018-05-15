@@ -1,14 +1,16 @@
+{-# LANGUAGE CPP, DeriveDataTypeable #-}
 import Test.Framework (defaultMain, testGroup, Test)
 import Test.Framework.Providers.HUnit
 import Test.HUnit hiding (Test, assert)
 
+import Data.Typeable (Typeable)
 import Control.Monad
 import Control.Exception as Ex
 import System.Exit
 
 import qualified UnexceptionalIO as UIO
 
-data CustomException = CustomException deriving (Show)
+data CustomException = CustomException deriving (Show, Typeable)
 instance Exception CustomException
 
 class TestClass a where
