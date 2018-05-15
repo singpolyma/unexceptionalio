@@ -35,7 +35,7 @@ module UnexceptionalIO (
 ) where
 
 import Data.Maybe (fromMaybe)
-import Control.Applicative (Applicative(..), (<|>))
+import Control.Applicative (Applicative(..), (<|>), (<$>))
 import Control.Monad (liftM, ap, (<=<))
 import Control.Monad.Fix (MonadFix(..))
 #ifdef __GLASGOW_HASKELL__
