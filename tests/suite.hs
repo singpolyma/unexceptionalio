@@ -7,6 +7,7 @@ import Data.Typeable (Typeable)
 import Control.Monad
 import System.Exit
 import qualified Control.Exception as Ex
+import qualified Control.Concurrent as Concurrent
 
 import qualified UnexceptionalIO as UIO
 
@@ -37,9 +38,55 @@ fromIOPasses io = do
 		(\x -> assertFailure $ "fromIO caught: " ++ show x)
 		caught
 
+#if MIN_VERSION_base(4,7,0)
+threadReturns :: UIO.UIO () -> (Either Ex.SomeException () -> Assertion) -> Assertion
+threadReturns spawn assertion = do
+	mvar <- Concurrent.newEmptyMVar
+	Concurrent.forkFinally (UIO.run spawn >> Concurrent.yield) (Concurrent.putMVar mvar)
+	result <- Concurrent.takeMVar mvar
+	assertion result
+
+assertRightUnit :: (Show e) => Either e () -> Assertion
+assertRightUnit (Left e) = assertFailure $ "Expected Right () got Left " ++ show e
+assertRightUnit (Right ()) = return ()
+
+assertLeft :: (e -> Assertion) -> Either e () -> Assertion
+assertLeft _ (Right ()) = assertFailure "Expected Left ... got Right ()"
+assertLeft assertion (Left e) = assertion e
+
+assertChildThreadError :: Ex.SomeException -> Assertion
+assertChildThreadError e = case Ex.fromException e of
+	Just (UIO.ChildThreadError _) -> return ()
+	Nothing -> assertFailure $ "Expected ChildThreadError got " ++ show e
+#endif
+
 tests :: [Test]
 tests =
 	[
+#if MIN_VERSION_base(4,7,0)
+		testGroup "fork" [
+			testCase "ignores success" (threadReturns
+				(void $ UIO.fork $ return ())
+				assertRightUnit
+			),
+			testCase "ignores threadKilled" (threadReturns
+				(UIO.fork (forever $ UIO.unsafeFromIO Concurrent.yield) >>= UIO.unsafeFromIO . Concurrent.killThread)
+				assertRightUnit
+			),
+			testCase "re-throws SomeAsyncException" (threadReturns
+				(void $ UIO.fork (UIO.unsafeFromIO $ Ex.throwIO Ex.UserInterrupt))
+				(assertLeft ((@?= Just Ex.UserInterrupt) . Ex.fromException))
+			),
+			testCase "re-throws ExitCode" (threadReturns
+				(void $ UIO.fork (UIO.unsafeFromIO exitSuccess))
+				(assertLeft ((@?= Just ExitSuccess) . Ex.fromException))
+			),
+			testCase "wraps sync PseudoException in ChildThreadError" (threadReturns
+				(void $ UIO.fork (error "blah"))
+				(assertLeft assertChildThreadError)
+			)
+		],
+#endif
 		testGroup "fromIO catches runtime errors" [
 			testCase "fail" (fromIOCatches $ fail "boo"),
 			testCase "userError" (fromIOCatches $ Ex.throwIO $ userError "boo"),

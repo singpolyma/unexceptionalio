@@ -30,9 +30,10 @@ module UnexceptionalIO (
 	ExternalError(..),
 	-- * Pseudo exception helpers
 	bracket,
-#if MIN_VERSION_base(4,6,0)
+#if MIN_VERSION_base(4,7,0)
 	forkFinally,
-	fork
+	fork,
+	ChildThreadError(..)
 #endif
 #endif
 ) where
@@ -232,8 +233,9 @@ fromIO' :: (Ex.Exception e, Unexceptional m) =>
 	-> IO a
 	-> m (Either e a)
 fromIO' f = (return . either (\e -> Left $ fromMaybe (f e) $ castException e) Right) <=< fromIO
-	where
-	castException = Ex.fromException . Ex.toException
+
+castException :: (Ex.Exception e1, Ex.Exception e2) => e1 -> Maybe e2
+castException = Ex.fromException . Ex.toException
 #endif
 
 -- | Re-embed 'UIO' into 'IO'
@@ -259,7 +261,7 @@ bracket :: (Unexceptional m) => UIO a -> (a -> UIO ()) -> (a -> UIO c) -> m c
 bracket acquire release body =
 	unsafeFromIO $ Ex.bracket (run acquire) (run . release) (run . body)
 
-#if MIN_VERSION_base(4,6,0)
+#if MIN_VERSION_base(4,7,0)
 -- | Mirrors 'Concurrent.forkFinally', but since the body is 'UIO',
 --   the thread must terminate successfully or because of 'PseudoException'
 forkFinally :: (Unexceptional m) => UIO a -> (Either PseudoException a -> UIO ()) -> m Concurrent.ThreadId
@@ -270,15 +272,38 @@ forkFinally body handler = unsafeFromIO $ Concurrent.forkFinally (run body) $ \r
 			Nothing -> error $ "Bug in UnexceptionalIO: forkFinally caught a non-PseudoException: " ++ show e
 		Right x -> run $ handler $ Right x
 
--- | Mirrors 'Concurrent.forkIO', but re-throws any 'PseudoException'
---   to the parent thread
+-- | Mirrors 'Concurrent.forkIO', but re-throws errors to the parent thread
+--
+-- * Ignores manual thread kills, since those are on purpose.
+-- * Re-throws async exceptions ('SomeAsyncException') as is.
+-- * Re-throws 'ExitCode' as is in an attempt to exit with the requested code.
+-- * Wraps synchronous 'PseudoException' in async 'ChildThreadError'.
 fork :: (Unexceptional m) => UIO () -> m Concurrent.ThreadId
 fork body = do
 	parent <- unsafeFromIO Concurrent.myThreadId
 	forkFinally body $ either (handler parent) (const $ return ())
 	where
 	handler parent e
-		| Just Ex.ThreadKilled <- Ex.fromException (Ex.toException e) = return ()
-		| otherwise = unsafeFromIO $ Concurrent.throwTo parent e
+		-- Thread manually killed. I assume on purpose
+		| Just Ex.ThreadKilled <- castException e = return ()
+		-- Async exception, nothing to do with this thread, propogate directly
+		| Just (Ex.SomeAsyncException _) <- castException e =
+			unsafeFromIO $ Concurrent.throwTo parent e
+		-- Attempt to manually end the process,
+		-- not an async exception, so a bit dangerous to throw async'ly, but
+		-- you really do want this to reach the top as-is for the exit code to
+		-- work.
+		| Just e <- castException e =
+			unsafeFromIO $ Concurrent.throwTo parent (e :: ExitCode)
+		-- Non-async PseudoException, so wrap in an async wrapper before
+		-- throwing async'ly
+		| otherwise = unsafeFromIO $ Concurrent.throwTo parent (ChildThreadError e)
+
+-- | Async signal that a child thread ended due to non-async PseudoException
+newtype ChildThreadError = ChildThreadError PseudoException deriving (Show, Typeable)
+
+instance Ex.Exception ChildThreadError where
+	toException = Ex.asyncExceptionToException
+	fromException = Ex.asyncExceptionFromException
 #endif
 #endif
