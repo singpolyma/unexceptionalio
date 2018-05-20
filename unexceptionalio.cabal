@@ -23,6 +23,8 @@ description:
         .
         You may also with to investigate unexceptionalio-trans if you like
         monad transformers.
+        .
+        Blog post: http://sngpl.ma/p4uT0
 
 library
         default-language: Haskell2010
