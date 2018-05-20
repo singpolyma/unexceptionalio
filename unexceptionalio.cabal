@@ -1,6 +1,6 @@
 name:            unexceptionalio
 version:         0.4.0
-cabal-version:   >=1.8
+cabal-version:   >=1.10
 license:         OtherLicense
 license-file:    COPYING
 copyright:       © 2013-2018 Stephen Paul Weber
@@ -25,6 +25,8 @@ description:
         monad transformers.
 
 library
+        default-language: Haskell2010
+        ghc-options: -fno-warn-tabs
         exposed-modules:
                 UnexceptionalIO
 
@@ -34,7 +36,8 @@ library
 test-suite tests
         type:        exitcode-stdio-1.0
         main-is:     tests/suite.hs
-        ghc-options: -O0
+        ghc-options: -O0 -fno-warn-tabs
+        default-language: Haskell2010
 
         build-depends:
                 base == 4.*,
