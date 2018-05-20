@@ -42,7 +42,7 @@ fromIOPasses io = do
 threadReturns :: UIO.UIO () -> (Either Ex.SomeException () -> Assertion) -> Assertion
 threadReturns spawn assertion = do
 	mvar <- Concurrent.newEmptyMVar
-	Concurrent.forkFinally (UIO.run spawn >> Concurrent.yield) (Concurrent.putMVar mvar)
+	void $ Concurrent.forkFinally (UIO.run spawn >> Concurrent.yield) (Concurrent.putMVar mvar)
 	result <- Concurrent.takeMVar mvar
 	assertion result
 
@@ -98,9 +98,9 @@ tests =
 #endif
 			testCase "error" (fromIOPasses $ error "boo"),
 			testCase "undefined" (fromIOPasses undefined),
-			testCase "ArithException" (fromIOPasses $ void (return $! 1 `div` 0)),
+			testCase "ArithException" (fromIOPasses $ void (return $! (1::Int) `div` 0)),
 			testCase "assert" (fromIOPasses $ Ex.assert False (return ())),
-			testCase "pattern match fail" (fromIOPasses $ (\(Just x) -> return ()) Nothing),
+			testCase "pattern match fail" (fromIOPasses $ (\(Just _) -> return ()) Nothing),
 			testCase "array out of bounds" (fromIOPasses $ Ex.throwIO $ Ex.IndexOutOfBounds "boo"),
 			testCase "array uninitialized" (fromIOPasses $ Ex.throwIO $ Ex.UndefinedElement "boo"),
 			testCase "no method" (fromIOPasses $ print $ testClassMethod CantTestClass),
