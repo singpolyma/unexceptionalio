@@ -2,9 +2,9 @@ GHCFLAGS=-Wall -fno-warn-tabs -fno-warn-name-shadowing -XHaskell2010
 HLINTFLAGS=-XHaskell2010 -XCPP -i 'Use camelCase' -i 'Use String' -i 'Use string literal' -i 'Use list comprehension' --utf8
 VERSION=0.4.0
 
-.PHONY: all clean doc install
+.PHONY: all clean doc install test
 
-all: report.html doc dist/build/libHSunexceptionalio-$(VERSION).a dist/unexceptionalio-$(VERSION).tar.gz
+all: report.html test doc dist/build/libHSunexceptionalio-$(VERSION).a dist/unexceptionalio-$(VERSION).tar.gz
 
 install: dist/build/libHSunexceptionalio-$(VERSION).a
 	cabal install
@@ -13,6 +13,9 @@ report.html: UnexceptionalIO.hs
 	-hlint $(HLINTFLAGS) --report UnexceptionalIO.hs
 
 doc: dist/doc/html/unexceptionalio/index.html README
+
+test: UnexceptionalIO.hs tests/suite.hs
+	runhaskell -- $(GHCFLAGS) -fno-warn-missing-methods -fno-warn-missing-fields tests/suite.hs
 
 README: unexceptionalio.cabal
 	tail -n+$$(( `grep -n ^description: $^ | head -n1 | cut -d: -f1` + 1 )) $^ > .$@
