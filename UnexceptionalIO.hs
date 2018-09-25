@@ -55,8 +55,8 @@ import qualified Control.Exception.Base as Ex
 -- | Not everything handled by the exception system is a run-time error
 -- you can handle.  This is the class of unrecoverable pseudo-exceptions.
 --
--- Additionally, except for 'ExitCode' any of these psuedo-exceptions
--- you could never guarentee to have caught.  Since they can come
+-- Additionally, except for 'ExitCode' any of these pseudo-exceptions
+-- you could never guarantee to have caught.  Since they can come
 -- from anywhere at any time, we could never guarentee that 'UIO' does
 -- not contain them.
 data PseudoException =
