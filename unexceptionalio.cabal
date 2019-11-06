@@ -26,6 +26,10 @@ description:
         .
         Blog post: http://sngpl.ma/p4uT0
 
+flag mtl
+  Description: Include some monad transformer support
+  Default: True
+
 library
         default-language: Haskell2010
         ghc-options: -fno-warn-tabs
@@ -34,6 +38,9 @@ library
 
         build-depends:
                 base == 4.*
+        if flag(mtl)
+		build-depends: mtl
+		cpp-options: -DMTL_SUPPORT=1
 
 test-suite tests
         type:        exitcode-stdio-1.0

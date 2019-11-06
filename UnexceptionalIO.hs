@@ -24,6 +24,10 @@ module UnexceptionalIO (
 	unsafeFromIO,
 	-- * Pseudo exceptions
 	SomeNonPseudoException,
+#if MTL_SUPPORT
+        HasSomeNonPseudoException(fromSomeNonPseudoException),
+        liftIO,
+#endif
 #ifdef __GLASGOW_HASKELL__
 	PseudoException(..),
 	ProgrammerError(..),
@@ -42,6 +46,15 @@ import Data.Maybe (fromMaybe)
 import Control.Applicative (Applicative(..), (<|>), (<$>))
 import Control.Monad (liftM, ap, (<=<))
 import Control.Monad.Fix (MonadFix(..))
+#if MTL_SUPPORT
+import Control.Monad.Except (MonadError, throwError)
+import Control.Monad.RWS (RWST)
+import Control.Monad.Reader (ReaderT)
+import Control.Monad.State (StateT)
+import qualified Control.Monad.Trans as Trans (MonadTrans(lift))
+import Control.Monad.Except (ExceptT)
+import Control.Monad.Writer (WriterT)
+#endif
 #ifdef __GLASGOW_HASKELL__
 import System.Exit (ExitCode)
 import Control.Exception (try)
@@ -189,6 +202,33 @@ type SomeNonPseudoException = IOError
 
 throwIO :: SomeNonPseudoException -> IO a
 throwIO = ioError
+#endif
+
+#if MTL_SUPPORT
+-- Instance for standard monad transformers
+instance Unexceptional m => Unexceptional (ExceptT e m) where
+  lift = Trans.lift . lift
+instance Unexceptional m => Unexceptional (ReaderT r m) where
+  lift = Trans.lift . lift
+instance (Unexceptional m, Monoid w) => Unexceptional (RWST r w s m) where
+  lift = Trans.lift . lift
+instance Unexceptional m => Unexceptional (StateT s m) where
+  lift = Trans.lift . lift
+instance (Unexceptional m, Monoid w) => Unexceptional (WriterT w m) where
+  lift = Trans.lift . lift
+
+-- | If you are using MonadError you will want to create
+-- 'HasSomeNonPseudoException' instances so that the error
+-- type can receive such errors via 'withExceptT'.
+class HasSomeNonPseudoException e where
+  fromSomeNonPseudoException :: SomeNonPseudoException -> e
+instance HasSomeNonPseudoException SomeNonPseudoException where
+  fromSomeNonPseudoException = id
+
+-- | A function with an intentional name conflict with the MonadIO
+-- method 'Control.Monad.IO.Class.liftIO'.
+liftIO :: (MonadError e m, Unexceptional m, HasSomeNonPseudoException e) => IO a -> m a
+liftIO io = fromIO io >>= either (throwError . fromSomeNonPseudoException) return
 #endif
 
 -- | Like IO, but throws only 'PseudoException'
