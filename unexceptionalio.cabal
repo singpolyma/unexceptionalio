@@ -21,7 +21,7 @@ description:
         > import UnexceptionalIO (UIO)
         > import qualified UnexceptionalIO as UIO
         .
-        You may also with to investigate unexceptionalio-trans if you like
+        You may also wish to investigate unexceptionalio-trans if you like
         monad transformers.
         .
         Blog post: http://sngpl.ma/p4uT0
