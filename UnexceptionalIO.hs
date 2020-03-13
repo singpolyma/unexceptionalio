@@ -231,7 +231,7 @@ fromIO' :: (Ex.Exception e, Unexceptional m) =>
 	(SomeNonPseudoException -> e) -- ^ Default if an unexpected exception occurs
 	-> IO a
 	-> m (Either e a)
-fromIO' f = fmap (either (Left . f) id) . fromIO . try
+fromIO' f = liftM (either (Left . f) id) . fromIO . try
 #endif
 
 -- | Re-embed 'UIO' into 'IO'
