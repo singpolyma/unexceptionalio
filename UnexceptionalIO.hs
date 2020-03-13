@@ -231,10 +231,7 @@ fromIO' :: (Ex.Exception e, Unexceptional m) =>
 	(SomeNonPseudoException -> e) -- ^ Default if an unexpected exception occurs
 	-> IO a
 	-> m (Either e a)
-fromIO' f = (return . either (\e -> Left $ fromMaybe (f e) $ castException e) Right) <=< fromIO
-
-castException :: (Ex.Exception e1, Ex.Exception e2) => e1 -> Maybe e2
-castException = Ex.fromException . Ex.toException
+fromIO' f = fmap (either (Left . f) id) . fromIO . try
 #endif
 
 -- | Re-embed 'UIO' into 'IO'
@@ -297,6 +294,9 @@ fork body = do
 		-- Non-async PseudoException, so wrap in an async wrapper before
 		-- throwing async'ly
 		| otherwise = unsafeFromIO $ Concurrent.throwTo parent (ChildThreadError e)
+
+castException :: (Ex.Exception e1, Ex.Exception e2) => e1 -> Maybe e2
+castException = Ex.fromException . Ex.toException
 
 -- | Async signal that a child thread ended due to non-async PseudoException
 newtype ChildThreadError = ChildThreadError PseudoException deriving (Show, Typeable)
