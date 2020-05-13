@@ -1,5 +1,5 @@
 GHCFLAGS=-Wall -fno-warn-tabs -fno-warn-name-shadowing -XHaskell2010
-HLINTFLAGS=-XHaskell2010 -XCPP -i 'Use camelCase' -i 'Use String' -i 'Use string literal' -i 'Use list comprehension' --utf8
+HLINTFLAGS=-XHaskell2010 -XCPP -i 'Use camelCase' -i 'Use String' -i 'Use string literal' -i 'Use list comprehension'
 VERSION=0.4.0
 
 .PHONY: all clean doc install test
