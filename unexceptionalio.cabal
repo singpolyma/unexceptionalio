@@ -40,6 +40,7 @@ test-suite tests
         main-is:     tests/suite.hs
         ghc-options: -O0 -fno-warn-tabs
         default-language: Haskell2010
+        other-modules: UnexceptionalIO
 
         build-depends:
                 base == 4.*,
