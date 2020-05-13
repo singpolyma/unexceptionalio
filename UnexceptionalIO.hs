@@ -204,8 +204,9 @@ instance Applicative UIO where
 instance Monad UIO where
 	return = UIO . return
 	(UIO x) >>= f = UIO (x >>= run . f)
-
+#if !MIN_VERSION_base(4,13,0)
 	fail s = error $ "UnexceptionalIO cannot fail (" ++ s ++ ")"
+#endif
 
 instance MonadFix UIO where
 	mfix f = UIO (mfix $ run . f)
